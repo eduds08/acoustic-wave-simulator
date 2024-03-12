@@ -29,17 +29,17 @@ source = np.array(-8. * (time - t0) * f0 * (np.exp(-1. * (time - t0) ** 2 * (f0 
 
 # Escolha do valor de wsx
 wsx = 1
-for n in range(15, 0, -1):
-    if (grid_size_z % n) == 0:
-        wsx = n  # workgroup x size
-        break
+# for n in range(15, 0, -1):
+#     if (grid_size_z % n) == 0:
+#         wsx = n  # workgroup x size
+#         break
 
 # Escolha do valor de wsy
 wsy = 1
-for n in range(15, 0, -1):
-    if (grid_size_x % n) == 0:
-        wsy = n  # workgroup x size
-        break
+# for n in range(15, 0, -1):
+#     if (grid_size_x % n) == 0:
+#         wsy = n  # workgroup x size
+#         break
 
 
 def sim_webgpu():
@@ -196,21 +196,25 @@ def sim_webgpu():
         compute_pass.set_bind_group(1, bind_group_1, [], 0, 999999)  # last 2 elements not used
 
         compute_pass.set_pipeline(compute_lap)
-        compute_pass.dispatch_workgroups(grid_size_z // wsx, grid_size_x // wsy)
+        compute_pass.dispatch_workgroups(1)
 
         compute_pass.set_pipeline(compute_sim)
-        compute_pass.dispatch_workgroups(grid_size_z // wsx, grid_size_x // wsy)
+        compute_pass.dispatch_workgroups(1)
 
         compute_pass.end()
         device.queue.submit([command_encoder.finish()])
 
-    out = device.queue.read_buffer(b3).cast("f")  # reads from buffer 3
+        out = device.queue.read_buffer(b3).cast("f")
+
+        plt.imsave(f"./images/plot_future_final{i}.png", np.asarray(out).reshape((grid_size_z, grid_size_x)))
+
+    #out = device.queue.read_buffer(b3).cast("f")  # reads from buffer 3
     adapter_info = device.adapter.request_adapter_info()
 
-    return np.asarray(out).reshape((grid_size_z, grid_size_x)), adapter_info["device"]
+    return adapter_info["device"]
 
 
-p_fut, gpu_str = sim_webgpu()
+gpu_str = sim_webgpu()
 print(gpu_str)
 
-plt.imsave(f"./plot_future_final.png", p_fut)
+# plt.imsave(f"./plot_future_final.png", p_fut)

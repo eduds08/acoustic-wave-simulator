@@ -42,9 +42,9 @@ fn laplacian_5_operator() {
 //    let z: i32 = i32(index.x);
 //    let x: i32 = i32(index.y);
 
-    for (var z = 0; z < 50; z+=1)
+    for (var z = 0; z < auxcp.grid_size_x; z+=1)
     {
-        for (var x = 0; x < 50; x+=1)
+        for (var x = 0; x < auxcp.grid_size_x; x+=1)
         {
             pzz[x + z * auxcp.grid_size_x] = f32(0);
             pxx[x + z * auxcp.grid_size_x] = f32(0);
@@ -69,9 +69,9 @@ fn sim() {
 //    let z: i32 = i32(index.x);
 //    let x: i32 = i32(index.y);
 
-    for (var z = 0; z < 50; z+=1)
+    for (var z = 0; z < auxcp.grid_size_x; z+=1)
     {
-        for (var x = 0; x < 50; x+=1)
+        for (var x = 0; x < auxcp.grid_size_x; x+=1)
         {
             P_future[x + z * auxcp.grid_size_x] = (c[x + z * auxcp.grid_size_x] * c[x + z * auxcp.grid_size_x]) * lap[x + z * auxcp.grid_size_x] * (0.001 * 0.001);
 
@@ -81,9 +81,9 @@ fn sim() {
 
     P_future[auxcp.source_x + auxcp.source_z * auxcp.grid_size_x] += f32(5000);
 
-    for (var z = 0; z < 50; z+=1)
+    for (var z = 0; z < auxcp.grid_size_x; z+=1)
     {
-        for (var x = 0; x < 50; x+=1)
+        for (var x = 0; x < auxcp.grid_size_x; x+=1)
         {
             P_past[x + z * auxcp.grid_size_x] = P_present[x + z * auxcp.grid_size_x];
             P_present[x + z * auxcp.grid_size_x] = P_future[x + z * auxcp.grid_size_x];

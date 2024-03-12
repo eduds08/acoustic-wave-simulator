@@ -74,8 +74,8 @@ fn sim(@builtin(global_invocation_id) index: vec3<u32>) {
     {
         P_future[auxcp.source_x + auxcp.source_z * auxcp.grid_size_x] = f32(5000);
     }
-    if (z == 49 && x == 47)
-    {
-        P_future[auxcp.source_x + auxcp.source_z * auxcp.grid_size_x] = f32(0);
-    }
+//    if (z == 49 && x == 47)
+//    {
+//        P_future[auxcp.source_x + auxcp.source_z * auxcp.grid_size_x] = f32(0);
+//    }
 }

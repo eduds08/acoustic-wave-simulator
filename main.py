@@ -205,13 +205,12 @@ def sim_webgpu():
         device.queue.submit([command_encoder.finish()])
 
     out = device.queue.read_buffer(b3).cast("f")  # reads from buffer 3
-    pressao_presente = device.queue.read_buffer(b1).cast("f")
     adapter_info = device.adapter.request_adapter_info()
 
-    return np.asarray(out).reshape((grid_size_z, grid_size_x)), adapter_info["device"], np.asarray(pressao_presente).reshape((grid_size_z, grid_size_x))
+    return np.asarray(out).reshape((grid_size_z, grid_size_x)), adapter_info["device"]
 
 
-p_fut, gpu_str, p_pres = sim_webgpu()
+p_fut, gpu_str = sim_webgpu()
 print(gpu_str)
 
 plt.imsave(f"./plot_future_final.png", p_fut)

@@ -38,55 +38,40 @@ var<workgroup> pxx: array<f32, 2500>;
 
 @compute
 @workgroup_size(wsx, wsy)
-fn laplacian_5_operator() {
-//    let z: i32 = i32(index.x);
-//    let x: i32 = i32(index.y);
+fn laplacian_5_operator(@builtin(global_invocation_id) index: vec3<u32>) {
+    let z: i32 = i32(index.x);
+    let x: i32 = i32(index.y);
 
-    for (var z = 0; z < auxcp.grid_size_x; z+=1)
+    pzz[x + z * auxcp.grid_size_x] = f32(0);
+    pxx[x + z * auxcp.grid_size_x] = f32(0);
+
+    if (z >= 2 && z <= 47)
     {
-        for (var x = 0; x < auxcp.grid_size_x; x+=1)
-        {
-            pzz[x + z * auxcp.grid_size_x] = f32(0);
-            pxx[x + z * auxcp.grid_size_x] = f32(0);
-
-            if (z >= 2 && z <= 47)
-            {
-                pzz[x + z * auxcp.grid_size_x] = f32((f32(-1)/f32(12)) * f32(P_present[(z + 2) * auxcp.grid_size_x + x]) + (f32(4)/f32(3)) * f32(P_present[(z + 1) * auxcp.grid_size_x + x]) - (f32(5)/f32(2)) * f32(P_present[x + z * auxcp.grid_size_x]) + (f32(4)/f32(3)) * f32(P_present[(z - 1) * auxcp.grid_size_x + x]) - (f32(1)/f32(12)) * f32(P_present[(z - 2) * auxcp.grid_size_x + x])) / f32(1);
-            }
-            if (x >= 2 && x <= 47)
-            {
-                pxx[x + z * auxcp.grid_size_x] = f32((f32(-1)/f32(12)) * f32(P_present[z * auxcp.grid_size_x + (x + 2)]) + (f32(4)/f32(3)) * f32(P_present[z * auxcp.grid_size_x + (x + 1)]) - (f32(5)/f32(2)) * f32(P_present[x + z * auxcp.grid_size_x]) + (f32(4)/f32(3)) * f32(P_present[z * auxcp.grid_size_x + (x - 1)]) - (f32(1)/f32(12)) * f32(P_present[z * auxcp.grid_size_x + (x - 2)])) / f32(1);
-            }
-
-            lap[x + z * auxcp.grid_size_x] = pzz[x + z * auxcp.grid_size_x] + pxx[x + z * auxcp.grid_size_x];
-        }
+        pzz[x + z * auxcp.grid_size_x] = f32((f32(-1)/f32(12)) * f32(P_present[(z + 2) * auxcp.grid_size_x + x]) + (f32(4)/f32(3)) * f32(P_present[(z + 1) * auxcp.grid_size_x + x]) - (f32(5)/f32(2)) * f32(P_present[x + z * auxcp.grid_size_x]) + (f32(4)/f32(3)) * f32(P_present[(z - 1) * auxcp.grid_size_x + x]) - (f32(1)/f32(12)) * f32(P_present[(z - 2) * auxcp.grid_size_x + x])) / f32(1);
     }
+    if (x >= 2 && x <= 47)
+    {
+        pxx[x + z * auxcp.grid_size_x] = f32((f32(-1)/f32(12)) * f32(P_present[z * auxcp.grid_size_x + (x + 2)]) + (f32(4)/f32(3)) * f32(P_present[z * auxcp.grid_size_x + (x + 1)]) - (f32(5)/f32(2)) * f32(P_present[x + z * auxcp.grid_size_x]) + (f32(4)/f32(3)) * f32(P_present[z * auxcp.grid_size_x + (x - 1)]) - (f32(1)/f32(12)) * f32(P_present[z * auxcp.grid_size_x + (x - 2)])) / f32(1);
+    }
+
+    lap[x + z * auxcp.grid_size_x] = pzz[x + z * auxcp.grid_size_x] + pxx[x + z * auxcp.grid_size_x];
 }
 
 @compute
 @workgroup_size(wsx, wsy)
-fn sim() {
-//    let z: i32 = i32(index.x);
-//    let x: i32 = i32(index.y);
+fn sim(@builtin(global_invocation_id) index: vec3<u32>) {
+    let z: i32 = i32(index.x);
+    let x: i32 = i32(index.y);
 
-    for (var z = 0; z < auxcp.grid_size_x; z+=1)
+    P_future[x + z * auxcp.grid_size_x] = (c[x + z * auxcp.grid_size_x] * c[x + z * auxcp.grid_size_x]) * lap[x + z * auxcp.grid_size_x] * (0.001 * 0.001);
+
+    P_future[x + z * auxcp.grid_size_x] += ((f32(2) * P_present[x + z * auxcp.grid_size_x]) - P_past[x + z * auxcp.grid_size_x]);
+
+    if (z == auxcp.source_z && x == auxcp.source_x)
     {
-        for (var x = 0; x < auxcp.grid_size_x; x+=1)
-        {
-            P_future[x + z * auxcp.grid_size_x] = (c[x + z * auxcp.grid_size_x] * c[x + z * auxcp.grid_size_x]) * lap[x + z * auxcp.grid_size_x] * (0.001 * 0.001);
-
-            P_future[x + z * auxcp.grid_size_x] += ((f32(2) * P_present[x + z * auxcp.grid_size_x]) - P_past[x + z * auxcp.grid_size_x]);
-        }
+        P_future[x + z * auxcp.grid_size_x] += f32(5000);
     }
 
-    P_future[auxcp.source_x + auxcp.source_z * auxcp.grid_size_x] += f32(5000);
-
-    for (var z = 0; z < auxcp.grid_size_x; z+=1)
-    {
-        for (var x = 0; x < auxcp.grid_size_x; x+=1)
-        {
-            P_past[x + z * auxcp.grid_size_x] = P_present[x + z * auxcp.grid_size_x];
-            P_present[x + z * auxcp.grid_size_x] = P_future[x + z * auxcp.grid_size_x];
-        }
-    }
+    P_past[x + z * auxcp.grid_size_x] = P_present[x + z * auxcp.grid_size_x];
+    P_present[x + z * auxcp.grid_size_x] = P_future[x + z * auxcp.grid_size_x];
 }

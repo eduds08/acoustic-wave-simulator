@@ -58,7 +58,7 @@ def sim_webgpu():
 
     info_int = np.array(
         [
-            np.int32(grid_size_z), np.int32(grid_size_x), np.int32(source_z), np.int32(source_x)
+            np.int32(grid_size_z), np.int32(grid_size_x), np.int32(source_z), np.int32(source_x), 0
         ],
         dtype=np.int32
     )
@@ -109,7 +109,7 @@ def sim_webgpu():
             "binding": 0,
             "visibility": wgpu.ShaderStage.COMPUTE,
             "buffer": {
-                "type":  wgpu.BufferBindingType.read_only_storage,
+                "type":  wgpu.BufferBindingType.storage,
             },
         },
         {
@@ -219,6 +219,11 @@ def sim_webgpu():
         compute={"module": cshader, "entry_point": "laplacian_5_operator"},
     )
 
+    compute_incr = device.create_compute_pipeline(
+        layout=pipeline_layout,
+        compute={"module": cshader, "entry_point": "incr_time"},
+    )
+
     for i in range(total_time):
         command_encoder = device.create_command_encoder()
         compute_pass = command_encoder.begin_compute_pass()
@@ -231,6 +236,9 @@ def sim_webgpu():
 
         compute_pass.set_pipeline(compute_sim)
         compute_pass.dispatch_workgroups(grid_size_z // wsx, grid_size_x // wsy)
+
+        compute_pass.set_pipeline(compute_incr)
+        compute_pass.dispatch_workgroups(1)
 
         compute_pass.end()
         device.queue.submit([command_encoder.finish()])

@@ -3,6 +3,7 @@ struct InfoInt {
     grid_size_x: i32,
     source_z: i32,
     source_x: i32,
+    i: i32,
 };
 
 struct InfoFloat {
@@ -14,7 +15,7 @@ struct InfoFloat {
 // Group 0 - Constants Parameters
 
 @group(0) @binding(0) // Info Int
-var<storage,read> infoI32: InfoInt;
+var<storage,read_write> infoI32: InfoInt;
 
 @group(0) @binding(1) // Info Float
 var<storage,read> infoF32: InfoFloat;
@@ -72,9 +73,15 @@ fn sim(@builtin(global_invocation_id) index: vec3<u32>) {
 
     if (z == infoI32.source_z && x == infoI32.source_x)
     {
-        P_future[x + z * infoI32.grid_size_x] += f32(5000);
+        P_future[x + z * infoI32.grid_size_x] += source[infoI32.i];
     }
 
     P_past[x + z * infoI32.grid_size_x] = P_present[x + z * infoI32.grid_size_x];
     P_present[x + z * infoI32.grid_size_x] = P_future[x + z * infoI32.grid_size_x];
+}
+
+@compute
+@workgroup_size(1)
+fn incr_time() {
+    infoI32.i += 1;
 }

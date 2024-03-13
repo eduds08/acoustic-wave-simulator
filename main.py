@@ -8,33 +8,39 @@ else:
 import matplotlib.pyplot as plt
 import numpy as np
 
-grid_size_x = 50
+""" Parameters """
+
+grid_size_x = 1000
 grid_size_z = grid_size_x
+
 dx = 1
 dz = dx
-dt = 0.001
 
-source_x = np.int32(grid_size_x / 2)
-source_z = np.int32(grid_size_z / 2)
+dt = 0.001
 
 c = np.zeros((grid_size_z, grid_size_x), dtype=np.float32)
 c += 450.0
 
-total_time = 100
+total_time = 1000
 time = np.linspace(0, total_time * dt, total_time, dtype=np.float32)
+
+source_x = np.int32(grid_size_x / 2)
+source_z = np.int32(grid_size_z / 2)
 
 f0 = 10
 t0 = 2 / f0
 source = np.array(-8. * (time - t0) * f0 * (np.exp(-1. * (time - t0) ** 2 * (f0 * 4) ** 2)), dtype=np.float32)
 
-# Escolha do valor de wsx
+""" Workgroup Size """
+
+# wsx
 wsx = 1
 for n in range(15, 0, -1):
     if (grid_size_z % n) == 0:
         wsx = n  # workgroup x size
         break
 
-# Escolha do valor de wsy
+# wsy
 wsy = 1
 for n in range(15, 0, -1):
     if (grid_size_x % n) == 0:
@@ -50,50 +56,78 @@ def sim_webgpu():
 
     device = wgpu.utils.get_default_device()
 
-    aux_param = np.array(
-        [np.int32(grid_size_z), np.int32(grid_size_x), np.int32(dz), np.int32(dx), np.int32(dt), np.int32(source_z),
-         np.int32(source_z)], dtype=np.int32)
+    info_int = np.array(
+        [
+            np.int32(grid_size_z), np.int32(grid_size_x), np.int32(source_z), np.int32(source_x)
+        ],
+        dtype=np.int32
+    )
 
-    # Cria o shader para calculo contido no arquivo ``shader_2D_elast_cpml.wgsl''
+    info_float = np.array(
+        [
+            np.float32(dz), np.float32(dx), np.float32(dt)
+        ],
+        dtype=np.float32
+    )
+
     cshader = None
     with open('main_shader.wgsl') as shader_file:
         cshader_string = shader_file.read().replace('wsx', f'{wsx}').replace('wsy', f'{wsy}')
         cshader = device.create_shader_module(code=cshader_string)
 
-    # info integer buffer
-    b0 = device.create_buffer_with_data(data=aux_param, usage=wgpu.BufferUsage.STORAGE |
+    # Info Int
+    b0 = device.create_buffer_with_data(data=info_int, usage=wgpu.BufferUsage.STORAGE |
                                                              wgpu.BufferUsage.COPY_SRC)
-    # field pressure at present
-    b1 = device.create_buffer_with_data(data=p_present, usage=wgpu.BufferUsage.STORAGE |
+    # Info Float
+    b1 = device.create_buffer_with_data(data=info_float, usage=wgpu.BufferUsage.STORAGE |
                                                               wgpu.BufferUsage.COPY_SRC)
-    # field pressure at past
-    b2 = device.create_buffer_with_data(data=p_past, usage=wgpu.BufferUsage.STORAGE |
+    # Source
+    b2 = device.create_buffer_with_data(data=source, usage=wgpu.BufferUsage.STORAGE |
                                                            wgpu.BufferUsage.COPY_SRC)
-    # field pressure at future
-    b3 = device.create_buffer_with_data(data=p_future, usage=wgpu.BufferUsage.STORAGE |
+    # Velocity Map
+    b3 = device.create_buffer_with_data(data=c, usage=wgpu.BufferUsage.STORAGE |
                                                              wgpu.BufferUsage.COPY_SRC)
-    # laplacian matrix
-    b4 = device.create_buffer_with_data(data=lap, usage=wgpu.BufferUsage.STORAGE |
-                                                        wgpu.BufferUsage.COPY_DST |
+    # Pressure Present
+    b4 = device.create_buffer_with_data(data=p_present, usage=wgpu.BufferUsage.STORAGE |
                                                         wgpu.BufferUsage.COPY_SRC)
-    # velocity map
-    b5 = device.create_buffer_with_data(data=c, usage=wgpu.BufferUsage.STORAGE |
+    # Pressure Past
+    b5 = device.create_buffer_with_data(data=p_past, usage=wgpu.BufferUsage.STORAGE |
                                                       wgpu.BufferUsage.COPY_SRC)
 
-    # source term
-    b6 = device.create_buffer_with_data(data=source, usage=wgpu.BufferUsage.STORAGE |
-                                                           wgpu.BufferUsage.COPY_SRC)
+    # Pressure Future
+    b6 = device.create_buffer_with_data(data=p_future, usage=wgpu.BufferUsage.STORAGE |
+                                                             wgpu.BufferUsage.COPY_DST |
+                                                            wgpu.BufferUsage.COPY_SRC)
+
+    # Laplacian
+    b7 = device.create_buffer_with_data(data=lap, usage=wgpu.BufferUsage.STORAGE |
+                                                        wgpu.BufferUsage.COPY_DST |
+                                                        wgpu.BufferUsage.COPY_SRC)
 
     binding_layouts_params = [
         {
             "binding": 0,
             "visibility": wgpu.ShaderStage.COMPUTE,
             "buffer": {
-                "type": wgpu.BufferBindingType.storage,
+                "type":  wgpu.BufferBindingType.read_only_storage,
             },
         },
         {
-            "binding": 6,
+            "binding": 1,
+            "visibility": wgpu.ShaderStage.COMPUTE,
+            "buffer": {
+                "type": wgpu.BufferBindingType.read_only_storage,
+            },
+        },
+        {
+            "binding": 2,
+            "visibility": wgpu.ShaderStage.COMPUTE,
+            "buffer": {
+                "type": wgpu.BufferBindingType.read_only_storage,
+            },
+        },
+        {
+            "binding": 3,
             "visibility": wgpu.ShaderStage.COMPUTE,
             "buffer": {
                 "type": wgpu.BufferBindingType.read_only_storage,
@@ -101,27 +135,6 @@ def sim_webgpu():
         },
     ]
     binding_layouts_sim_arrays = [
-        {
-            "binding": 1,
-            "visibility": wgpu.ShaderStage.COMPUTE,
-            "buffer": {
-                "type": wgpu.BufferBindingType.storage,
-            },
-        },
-        {
-            "binding": 2,
-            "visibility": wgpu.ShaderStage.COMPUTE,
-            "buffer": {
-                "type": wgpu.BufferBindingType.storage,
-            },
-        },
-        {
-            "binding": 3,
-            "visibility": wgpu.ShaderStage.COMPUTE,
-            "buffer": {
-                "type": wgpu.BufferBindingType.storage,
-            },
-        },
         {
             "binding": 4,
             "visibility": wgpu.ShaderStage.COMPUTE,
@@ -133,7 +146,21 @@ def sim_webgpu():
             "binding": 5,
             "visibility": wgpu.ShaderStage.COMPUTE,
             "buffer": {
-                "type": wgpu.BufferBindingType.read_only_storage,
+                "type": wgpu.BufferBindingType.storage,
+            },
+        },
+        {
+            "binding": 6,
+            "visibility": wgpu.ShaderStage.COMPUTE,
+            "buffer": {
+                "type": wgpu.BufferBindingType.storage,
+            },
+        },
+        {
+            "binding": 7,
+            "visibility": wgpu.ShaderStage.COMPUTE,
+            "buffer": {
+                "type": wgpu.BufferBindingType.storage,
             },
         },
     ]
@@ -143,12 +170,6 @@ def sim_webgpu():
             "binding": 0,
             "resource": {"buffer": b0, "offset": 0, "size": b0.size},
         },
-        {
-            "binding": 6,
-            "resource": {"buffer": b6, "offset": 0, "size": b6.size},
-        },
-    ]
-    bindings_sim_arrays = [
         {
             "binding": 1,
             "resource": {"buffer": b1, "offset": 0, "size": b1.size},
@@ -161,6 +182,8 @@ def sim_webgpu():
             "binding": 3,
             "resource": {"buffer": b3, "offset": 0, "size": b3.size},
         },
+    ]
+    bindings_sim_arrays = [
         {
             "binding": 4,
             "resource": {"buffer": b4, "offset": 0, "size": b4.size},
@@ -168,6 +191,14 @@ def sim_webgpu():
         {
             "binding": 5,
             "resource": {"buffer": b5, "offset": 0, "size": b5.size},
+        },
+        {
+            "binding": 6,
+            "resource": {"buffer": b6, "offset": 0, "size": b6.size},
+        },
+        {
+            "binding": 7,
+            "resource": {"buffer": b7, "offset": 0, "size": b7.size},
         },
     ]
 
@@ -204,7 +235,7 @@ def sim_webgpu():
         compute_pass.end()
         device.queue.submit([command_encoder.finish()])
 
-    out = device.queue.read_buffer(b3).cast("f")  # reads from buffer 3
+    out = device.queue.read_buffer(b6).cast("f")  # reads from buffer 6 (Pressure Field Future)
     adapter_info = device.adapter.request_adapter_info()
 
     return np.asarray(out).reshape((grid_size_z, grid_size_x)), adapter_info["device"]

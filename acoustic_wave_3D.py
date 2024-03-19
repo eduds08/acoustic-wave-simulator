@@ -11,8 +11,8 @@ import numpy as np
 """ Parameters """
 
 grid_size_z = 20
-grid_size_x = 200
-grid_size_y = 200
+grid_size_x = 500
+grid_size_y = 500
 
 dz = 1
 dx = 1
@@ -276,5 +276,5 @@ Z = p_fut[grid_size_z // 2]
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 dem3d = ax.plot_surface(X, Y, Z, cmap='afmhot', linewidth=0)
-ax.set_title('P_future[10]')
+ax.set_title(f'Future Pressure Field at Z = {grid_size_z // 2}')
 plt.show()

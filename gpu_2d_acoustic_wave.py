@@ -10,8 +10,8 @@ import numpy as np
 
 """ Parameters """
 
-grid_size_z = 1000
-grid_size_x = 1000
+grid_size_z = 300
+grid_size_x = 300
 
 dz = 1
 dx = 1
@@ -21,7 +21,7 @@ dt = 0.001
 c = np.zeros((grid_size_z, grid_size_x), dtype=np.float32)
 c += 450.0
 
-total_time = 1000
+total_time = 500
 time = np.linspace(0, total_time * dt, total_time, dtype=np.float32)
 
 source_z = np.int32(grid_size_z / 2)

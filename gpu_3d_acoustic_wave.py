@@ -267,7 +267,6 @@ def sim_webgpu():
 p_fut, gpu_str = sim_webgpu()
 print(gpu_str)
 
-# Make data.
 X = np.arange(0, grid_size_x, 1)
 Y = np.arange(0, grid_size_y, 1)
 X, Y = np.meshgrid(X, Y)
